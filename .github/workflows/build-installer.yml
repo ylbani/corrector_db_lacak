@@ -1,0 +1,54 @@
+name: Compilar y Empaquetar Instalador
+
+on:
+  push:
+    branches: [ "main", "master" ]
+    tags: [ "v*" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build & Inno Setup Installer
+    runs-on: windows-latest
+
+    steps:
+    - name: Clonar Repositorio
+      uses: actions/checkout@v4
+
+    - name: Configurar .NET 10
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: Restaurar dependencias
+      run: dotnet restore DbSchemaSyncAuditor.csproj
+
+    - name: Publicar aplicación (Self-Contained win-x64)
+      run: |
+        dotnet publish DbSchemaSyncAuditor.csproj -c Release -r win-x64 --self-contained true -o ./publish
+
+    - name: Instalar Inno Setup
+      run: |
+        choco install innosetup --no-progress
+
+    - name: Compilar Instalador (.exe)
+      run: |
+        & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
+
+    - name: Subir Instalador como Artefacto de GitHub
+      uses: actions/upload-artifact@v4
+      with:
+        name: DbSchemaSyncAuditor_Setup
+        path: Output/DbSchemaSyncAuditor_Setup.exe
+        if-no-files-found: error
+
+    - name: Publicar en GitHub Releases (si es una etiqueta de versión)
+      if: startsWith(github.ref, 'refs/tags/v')
+      uses: softprops/action-gh-release@v2
+      with:
+        files: Output/DbSchemaSyncAuditor_Setup.exe
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
