@@ -24,7 +24,16 @@
 
         <!-- HEADER -->
         <StackPanel Grid.Row="0" Spacing="4">
-            <TextBlock Text="DbSchemaSyncAuditor" Style="{StaticResource TitleTextBlockStyle}" FontWeight="Bold" />
+            <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                <Image Source="ms-appx:///Assets/Square44x44Logo.targetsize-48_altform-lightunplated.png" 
+                       Width="38" 
+                       Height="38" 
+                       VerticalAlignment="Center" />
+                <TextBlock Text="DB Sync Auditor" 
+                           Style="{StaticResource TitleTextBlockStyle}" 
+                           FontWeight="Bold" 
+                           VerticalAlignment="Center" />
+            </StackPanel>
             <TextBlock Text="Auditor de Esquemas EF Core / EF6 vs SQL Server Físico" Style="{StaticResource BodyTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
         </StackPanel>
 
