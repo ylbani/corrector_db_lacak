@@ -327,18 +327,24 @@
                     <TextBlock x:Name="TxtFooterStatus" Text="Selecciona tu DLL y conéctate al servidor." VerticalAlignment="Center" />
                 </StackPanel>
 
-                <Button Grid.Column="1" 
-                        x:Name="BtnApplyMigration" 
-                        Click="BtnApplyMigration_Click" 
-                        IsEnabled="False" 
-                        Style="{StaticResource AccentButtonStyle}" 
-                        Background="#10B981" 
-                        Height="36">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <FontIcon Glyph="&#xE768;" />
-                        <TextBlock Text="Aplicar Cambios en Base de Datos Ahora" FontWeight="SemiBold" />
-                    </StackPanel>
-                </Button>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+                    <TextBlock x:Name="TxtFooterVersion" 
+                               Text="v1.0.1" 
+                               FontSize="12" 
+                               VerticalAlignment="Center" 
+                               Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                    <Button x:Name="BtnApplyMigration" 
+                            Click="BtnApplyMigration_Click" 
+                            IsEnabled="False" 
+                            Style="{StaticResource AccentButtonStyle}" 
+                            Background="#10B981" 
+                            Height="36">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE768;" />
+                            <TextBlock Text="Aplicar Cambios en Base de Datos Ahora" FontWeight="SemiBold" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
             </Grid>
         </Border>
     </Grid>

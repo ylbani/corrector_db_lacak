@@ -23,7 +23,8 @@ public class SqlScriptRunner
         foreach (var batch in batches)
         {
             await using var command = new SqlCommand(batch, connection);
-            command.CommandTimeout = 300;
+            // 0 = Sin límite de tiempo (evita 'Execution Timeout Expired' en tablas masivas)
+            command.CommandTimeout = 0;
             try
             {
                 await command.ExecuteNonQueryAsync(ct);

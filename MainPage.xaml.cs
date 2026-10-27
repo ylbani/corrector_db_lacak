@@ -26,7 +26,9 @@ public sealed partial class MainPage : Page
     public MainPage()
     {
         InitializeComponent();
-        TxtAppVersion.Text = $"v{_updateService.GetCurrentVersion().ToString(3)}";
+        var verStr = $"v{_updateService.GetCurrentVersion().ToString(3)}";
+        TxtAppVersion.Text = verStr;
+        TxtFooterVersion.Text = verStr;
     }
 
     private void CboAuthType_SelectionChanged(object sender, SelectionChangedEventArgs e)
