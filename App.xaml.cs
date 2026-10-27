@@ -29,6 +29,16 @@ public partial class App : Application
     /// </summary>
     public App()
     {
+        UnhandledException += (sender, e) =>
+        {
+            try
+            {
+                var logPath = System.IO.Path.Combine(AppContext.BaseDirectory, "crash.log");
+                System.IO.File.WriteAllText(logPath, e.Exception?.ToString() ?? e.Message);
+            }
+            catch { }
+        };
+
         InitializeComponent();
     }
 
@@ -38,7 +48,19 @@ public partial class App : Application
     /// <param name="args">Details about the launch request and process.</param>
     protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
     {
-        MainWindow = new MainWindow();
-        MainWindow.Activate();
+        try
+        {
+            MainWindow = new MainWindow();
+            MainWindow.Activate();
+        }
+        catch (Exception ex)
+        {
+            try
+            {
+                var logPath = System.IO.Path.Combine(AppContext.BaseDirectory, "launch_error.txt");
+                System.IO.File.WriteAllText(logPath, ex.ToString());
+            }
+            catch { }
+        }
     }
 }

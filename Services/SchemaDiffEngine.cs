@@ -127,8 +127,8 @@ public class SchemaDiffEngine
         // EF reporta nvarchar(max) cuando la BD tiene nvarchar(n). No se altera (evita falsos positivos).
         if (b == "nvarchar(max)" && a.StartsWith("nvarchar(")) return true;
 
-        // float/real en BD vs decimal por defecto en EF: convertir perdería precisión; se tolera.
-        if (b == "decimal(18,2)" && (a == "float" || a == "real")) return true;
+        // Nota: Si la BD tiene float o real y el modelo de EF tiene decimal, NO son equivalentes
+        // y causan System.InvalidOperationException al materializar con EF. Por ello se reportan como TypeMismatch.
 
         if ((a == "int" && b == "integer") || (a == "integer" && b == "int")) return true;
         if ((a == "bit" && b == "boolean") || (a == "boolean" && b == "bit")) return true;
