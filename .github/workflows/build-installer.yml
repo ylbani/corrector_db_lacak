@@ -44,10 +44,12 @@ jobs:
         path: Output/DbSchemaSyncAuditor_Setup.exe
         if-no-files-found: error
 
-    - name: Publicar en GitHub Releases (si es una etiqueta de versión)
-      if: startsWith(github.ref, 'refs/tags/v')
+    - name: Publicar en GitHub Releases
       uses: softprops/action-gh-release@v2
+      if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
       with:
+        tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'latest' }}
+        name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'Versión Más Reciente (latest)' }}
         files: Output/DbSchemaSyncAuditor_Setup.exe
         generate_release_notes: true
       env:

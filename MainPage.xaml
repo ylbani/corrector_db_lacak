@@ -22,20 +22,46 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- HEADER -->
-        <StackPanel Grid.Row="0" Spacing="4">
-            <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-                <Image Source="ms-appx:///Assets/Square44x44Logo.targetsize-48_altform-lightunplated.png" 
-                       Width="38" 
-                       Height="38" 
-                       VerticalAlignment="Center" />
-                <TextBlock Text="DB Sync Auditor" 
-                           Style="{StaticResource TitleTextBlockStyle}" 
-                           FontWeight="Bold" 
+        <!-- HEADER CON BOTÓN DE AUTO-ACTUALIZACIÓN -->
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Spacing="4">
+                <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                    <Image Source="ms-appx:///Assets/Square44x44Logo.targetsize-48_altform-lightunplated.png" 
+                           Width="38" 
+                           Height="38" 
                            VerticalAlignment="Center" />
+                    <TextBlock Text="DB Sync Auditor" 
+                               Style="{StaticResource TitleTextBlockStyle}" 
+                               FontWeight="Bold" 
+                               VerticalAlignment="Center" />
+                    <Border Background="{ThemeResource LayerFillColorDefaultBrush}" 
+                            CornerRadius="4" 
+                            Padding="6,2" 
+                            Margin="8,0,0,0"
+                            VerticalAlignment="Center">
+                        <TextBlock x:Name="TxtAppVersion" Text="v1.0.0" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    </Border>
+                </StackPanel>
+                <TextBlock Text="Auditor de Esquemas EF Core / EF6 vs SQL Server Físico" Style="{StaticResource BodyTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
             </StackPanel>
-            <TextBlock Text="Auditor de Esquemas EF Core / EF6 vs SQL Server Físico" Style="{StaticResource BodyTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-        </StackPanel>
+
+            <!-- Acciones de Actualización -->
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <ProgressRing x:Name="RingUpdate" IsActive="False" Visibility="Collapsed" Width="20" Height="20" />
+                <TextBlock x:Name="TxtUpdateStatus" VerticalAlignment="Center" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Visibility="Collapsed" />
+                <Button x:Name="BtnCheckUpdate" Click="BtnCheckUpdate_Click">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE895;" FontSize="14" />
+                        <TextBlock Text="Buscar Actualización" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
 
         <!-- PANEL 1: CONEXIÓN SQL SERVER Y SELECTOR DE BASE DE DATOS -->
         <Border Grid.Row="1" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="16">

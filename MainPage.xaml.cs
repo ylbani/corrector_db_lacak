@@ -16,6 +16,7 @@ public sealed partial class MainPage : Page
     private readonly SchemaDiffEngine _diffEngine = new();
     private readonly SqlPatchGenerator _patchGen = new();
     private readonly SqlScriptRunner _runner = new();
+    private readonly AppUpdateService _updateService = new();
 
     private List<SchemaDiffItem> _currentDiffs = [];
     private string _generatedSql = string.Empty;
@@ -25,6 +26,7 @@ public sealed partial class MainPage : Page
     public MainPage()
     {
         InitializeComponent();
+        TxtAppVersion.Text = $"v{_updateService.GetCurrentVersion().ToString(3)}";
     }
 
     private void CboAuthType_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -348,5 +350,58 @@ public sealed partial class MainPage : Page
             XamlRoot = this.XamlRoot
         };
         await dialog.ShowAsync();
+    }
+
+    private async void BtnCheckUpdate_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            BtnCheckUpdate.IsEnabled = false;
+            RingUpdate.Visibility = Visibility.Visible;
+            RingUpdate.IsActive = true;
+            TxtUpdateStatus.Visibility = Visibility.Visible;
+            TxtUpdateStatus.Text = "Verificando...";
+
+            var result = await _updateService.CheckForUpdatesAsync();
+
+            if (!result.UpdateAvailable)
+            {
+                TxtUpdateStatus.Text = "Tienes la versión más reciente.";
+                await ShowMessageAsync("Actualizaciones", $"Ya tienes instalada la versión más reciente ({TxtAppVersion.Text}).");
+                return;
+            }
+
+            var dialog = new ContentDialog
+            {
+                Title = "Actualización disponible",
+                Content = $"Existe una nueva versión: v{result.LatestVersion}\n\n¿Deseas descargar e instalar la actualización ahora?\n(La aplicación se cerrará para aplicar la nueva versión de forma automática)",
+                PrimaryButtonText = "Actualizar ahora",
+                CloseButtonText = "Más tarde",
+                XamlRoot = this.XamlRoot
+            };
+
+            var dialogResult = await dialog.ShowAsync();
+            if (dialogResult == ContentDialogResult.Primary && !string.IsNullOrEmpty(result.DownloadUrl))
+            {
+                TxtUpdateStatus.Text = "Descargando instalador...";
+                var progress = new Progress<double>(p =>
+                {
+                    TxtUpdateStatus.Text = $"Descargando... {p:P0}";
+                });
+
+                await _updateService.DownloadAndExecuteInstallerAsync(result.DownloadUrl, progress);
+            }
+        }
+        catch (Exception ex)
+        {
+            TxtUpdateStatus.Text = "Error al verificar.";
+            await ShowMessageAsync("Error de actualización", ex.Message);
+        }
+        finally
+        {
+            BtnCheckUpdate.IsEnabled = true;
+            RingUpdate.IsActive = false;
+            RingUpdate.Visibility = Visibility.Collapsed;
+        }
     }
 }
