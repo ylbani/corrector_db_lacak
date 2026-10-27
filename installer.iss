@@ -22,6 +22,13 @@ WizardStyle=modern
 ArchitecturesInstallIn64BitMode=x64compatible
 DisableProgramGroupPage=yes
 
+; Configuración para Actualizaciones (In-Place Upgrade)
+UsePreviousAppDir=yes
+CloseApplications=yes
+CloseApplicationsFilter=*.exe
+RestartApplications=no
+DisableDirPage=auto
+
 [Languages]
 Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
 Name: "english"; MessagesFile: "compiler:Default.isl"
