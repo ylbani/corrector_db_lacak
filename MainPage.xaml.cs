@@ -29,6 +29,12 @@ public sealed partial class MainPage : Page
         var verStr = $"v{_updateService.GetCurrentVersion().ToString(3)}";
         TxtAppVersion.Text = verStr;
         TxtFooterVersion.Text = verStr;
+
+        var defaultDll = TxtDllPathInput.Text.Trim();
+        if (System.IO.File.Exists(defaultDll))
+        {
+            LoadAssemblyFromPath(defaultDll, silent: true);
+        }
     }
 
     private void CboAuthType_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -141,6 +147,7 @@ public sealed partial class MainPage : Page
             {
                 CboDbContextTypes.SelectedIndex = 0;
                 CboDbContextTypes.IsEnabled = true;
+                TryAutoDetectDataContextSource();
                 if (!silent)
                 {
                     await ShowMessageAsync("DbContext(s) Detectados", $"Se cargó el archivo correctamente:\n{System.IO.Path.GetFileName(path)}\n\nDbContexts detectados: {_discoveredDbContextTypes.Count}");
@@ -149,6 +156,7 @@ public sealed partial class MainPage : Page
             else
             {
                 CboDbContextTypes.IsEnabled = false;
+                TxtDataContextStatus.Visibility = Visibility.Collapsed;
                 if (!silent)
                 {
                     await ShowMessageAsync("Aviso", "El ensamblado .DLL no contiene clases públicas que hereden de 'DbContext'.");
@@ -161,6 +169,59 @@ public sealed partial class MainPage : Page
             {
                 await ShowMessageAsync("Error al inspeccionar ensamblado", $"{ex.GetType().Name}:\n{ex.Message}");
             }
+        }
+    }
+
+    private void CboDbContextTypes_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        TryAutoDetectDataContextSource();
+    }
+
+    private void TryAutoDetectDataContextSource()
+    {
+        if (CboDbContextTypes == null || CboDbContextTypes.SelectedIndex < 0 || _discoveredDbContextTypes.Count <= CboDbContextTypes.SelectedIndex)
+            return;
+
+        var selectedType = _discoveredDbContextTypes[CboDbContextTypes.SelectedIndex];
+        if (string.IsNullOrWhiteSpace(_selectedDllPath)) return;
+
+        var foundSource = _inspector.DataContextParser.FindDataContextSourceFile(_selectedDllPath, selectedType.Name);
+        if (!string.IsNullOrWhiteSpace(foundSource))
+        {
+            TxtDataContextPath.Text = foundSource;
+            TxtDataContextStatus.Text = $"✔ Vinculado: {System.IO.Path.GetFileName(foundSource)}";
+            TxtDataContextStatus.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            TxtDataContextStatus.Text = "ℹ Modo IL compilado";
+            TxtDataContextStatus.Visibility = Visibility.Visible;
+        }
+    }
+
+    private async void BtnBrowseDataContext_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var picker = new Windows.Storage.Pickers.FileOpenPicker();
+            picker.ViewMode = Windows.Storage.Pickers.PickerViewMode.List;
+            picker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.ComputerFolder;
+            picker.FileTypeFilter.Add(".cs");
+
+            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(App.MainWindow);
+            WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
+
+            var file = await picker.PickSingleFileAsync();
+            if (file != null)
+            {
+                TxtDataContextPath.Text = file.Path;
+                TxtDataContextStatus.Text = $"✔ Manual: {file.Name}";
+                TxtDataContextStatus.Visibility = Visibility.Visible;
+            }
+        }
+        catch (Exception ex)
+        {
+            await ShowMessageAsync("Aviso", $"No se pudo abrir el selector: {ex.Message}.\nPuedes escribir o pegar la ruta directamente.");
         }
     }
 
@@ -210,8 +271,13 @@ public sealed partial class MainPage : Page
             RingLoading.IsActive = true;
             TxtSummary.Text = $"Extrayendo modelo de '{selectedDbContextType.Name}' y auditando '{selectedDb}'...";
 
-            // 1. Extraer modelo relacional desde el DbContext seleccionado
-            var efSchema = _inspector.ExtractModelFromAnyDbContext(selectedDbContextType, connString);
+            // 1. Extraer modelo relacional desde el DbContext seleccionado (con soporte de DataContext Fluent API)
+            var dataContextPath = TxtDataContextPath.Text.Trim();
+            var efSchema = _inspector.ExtractModelFromAnyDbContext(
+                selectedDbContextType, 
+                connString, 
+                string.IsNullOrWhiteSpace(dataContextPath) ? null : dataContextPath, 
+                _selectedDllPath);
 
             // 2. Extraer catálogo físico de SQL Server
             var dbSchema = await _reader.ReadDatabaseSchemaAsync(connString);

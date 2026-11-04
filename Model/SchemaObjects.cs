@@ -26,6 +26,8 @@ public record ColumnDefinition
     public required string StoreType { get; init; }
     public required bool IsNullable { get; init; }
     public bool IsPrimaryKey { get; init; }
+    public bool IsExplicitPrecision { get; init; }
+    public bool IsExplicitMaxLength { get; init; }
     public string? DefaultValueConstraint { get; init; }
     public string? DefaultValueSql { get; init; }
 }

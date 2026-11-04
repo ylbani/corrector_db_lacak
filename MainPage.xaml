@@ -154,39 +154,82 @@
             </Grid>
         </Border>
 
-        <!-- PANEL 2: SELECTOR OBLIGATORIO DE DLL DEL PROYECTO (DBCONTEXT REAL) -->
+        <!-- PANEL 2: SELECTOR DE DLL Y ARCHIVO DE CÓDIGO DATACONTEXT (.cs) -->
         <Border Grid.Row="2" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="16,12">
-            <Grid ColumnSpacing="14">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="340" />
-                </Grid.ColumnDefinitions>
+            <Grid RowSpacing="10">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
 
-                <Button x:Name="BtnBrowseDll" 
-                        Click="BtnBrowseDll_Click" 
-                        Style="{StaticResource DefaultButtonStyle}"
-                        VerticalAlignment="Bottom"
-                        Height="34">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <FontIcon Glyph="&#xE8B7;" />
-                        <TextBlock Text="Buscar DLL..." FontWeight="SemiBold" />
-                    </StackPanel>
-                </Button>
+                <!-- Fila 1: DLL compilada y DbContext selector -->
+                <Grid ColumnSpacing="14">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="340" />
+                    </Grid.ColumnDefinitions>
 
-                <TextBox Grid.Column="1" 
-                         x:Name="TxtDllPathInput" 
-                         Header="Ruta del archivo DLL compilado" 
-                         PlaceholderText="Ej. D:\Dev\PROYECTO LACAK WEB\DashboardWEB\dashboardWEB\bin\LacakWEB.dll" 
-                         Text="D:\Dev\PROYECTO LACAK WEB\DashboardWEB\dashboardWEB\bin\LacakWEB.dll" 
-                         TextChanged="TxtDllPathInput_TextChanged" />
+                    <Button x:Name="BtnBrowseDll" 
+                            Click="BtnBrowseDll_Click" 
+                            Style="{StaticResource DefaultButtonStyle}"
+                            VerticalAlignment="Bottom"
+                            Height="34">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE8B7;" />
+                            <TextBlock Text="Buscar DLL..." FontWeight="SemiBold" />
+                        </StackPanel>
+                    </Button>
 
-                <ComboBox Grid.Column="2" 
-                          x:Name="CboDbContextTypes" 
-                          Header="DbContext a Auditar" 
-                          HorizontalAlignment="Stretch" 
-                          IsEnabled="False" 
-                          PlaceholderText="-- Selecciona primero la DLL --" />
+                    <TextBox Grid.Column="1" 
+                             x:Name="TxtDllPathInput" 
+                             Header="Ruta del archivo DLL compilado" 
+                             PlaceholderText="Ej. D:\Dev\PROYECTO LACAK WEB\DashboardWEB\dashboardWEB\bin\LacakWEB.dll" 
+                             Text="D:\Dev\PROYECTO LACAK WEB\DashboardWEB\dashboardWEB\bin\LacakWEB.dll" 
+                             TextChanged="TxtDllPathInput_TextChanged" />
+
+                    <ComboBox Grid.Column="2" 
+                              x:Name="CboDbContextTypes" 
+                              Header="DbContext a Auditar" 
+                              HorizontalAlignment="Stretch" 
+                              IsEnabled="False" 
+                              SelectionChanged="CboDbContextTypes_SelectionChanged"
+                              PlaceholderText="-- Selecciona primero la DLL --" />
+                </Grid>
+
+                <!-- Fila 2: Archivo fuente del DataContext (.cs) para leer OnModelCreating directamente -->
+                <Grid Grid.Row="1" ColumnSpacing="14">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <Button x:Name="BtnBrowseDataContext" 
+                            Click="BtnBrowseDataContext_Click" 
+                            Style="{StaticResource DefaultButtonStyle}"
+                            VerticalAlignment="Bottom"
+                            Height="34">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE8A5;" />
+                            <TextBlock Text="Buscar .cs..." FontWeight="SemiBold" />
+                        </StackPanel>
+                    </Button>
+
+                    <TextBox Grid.Column="1" 
+                             x:Name="TxtDataContextPath" 
+                             Header="Archivo fuente del DataContext (.cs) — Detecta cambios en OnModelCreating (HasPrecision, etc.)" 
+                             PlaceholderText="Autodetectado o selecciona el archivo .cs (ej. DashboardContext.cs)" />
+
+                    <TextBlock Grid.Column="2" 
+                               x:Name="TxtDataContextStatus" 
+                               Text="Detectado" 
+                               VerticalAlignment="Bottom" 
+                               Foreground="{ThemeResource SystemFillColorSuccessBrush}" 
+                               FontSize="12" 
+                               Margin="0,0,0,8" 
+                               Visibility="Collapsed" />
+                </Grid>
             </Grid>
         </Border>
 

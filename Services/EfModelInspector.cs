@@ -31,6 +31,10 @@ public class EfModelInspector
         }
     }
 
+    private readonly DataContextModelParser _dataContextParser = new();
+
+    public DataContextModelParser DataContextParser => _dataContextParser;
+
     public List<Type> DiscoverDbContextTypesFromAssembly(string assemblyPath)
     {
         var folder = Path.GetDirectoryName(assemblyPath) ?? AppDomain.CurrentDomain.BaseDirectory;
@@ -77,7 +81,11 @@ public class EfModelInspector
         return dbContextTypes;
     }
 
-    public Dictionary<string, TableDefinition> ExtractModelFromAnyDbContext(Type dbContextType, string connectionString)
+    public Dictionary<string, TableDefinition> ExtractModelFromAnyDbContext(
+        Type dbContextType, 
+        string connectionString, 
+        string? explicitSourcePath = null, 
+        string? assemblyPath = null)
     {
         // Caso A: Si es EF Core DbContext
         if (typeof(Microsoft.EntityFrameworkCore.DbContext).IsAssignableFrom(dbContextType))
@@ -85,12 +93,15 @@ public class EfModelInspector
             var efCoreContext = CreateEfCoreDbContext(dbContextType, connectionString);
             using (efCoreContext)
             {
-                return ExtractFromEfCore(efCoreContext);
+                var efCoreModel = ExtractFromEfCore(efCoreContext);
+                var fluent = _dataContextParser.ExtractConfigurations(dbContextType, assemblyPath, explicitSourcePath);
+                ApplyFluentConfigurations(efCoreModel, fluent);
+                return efCoreModel;
             }
         }
 
         // Caso B: Si es EF6 (System.Data.Entity.DbContext) o POCOs con DbSet<T>
-        return ExtractFromEf6OrPoco(dbContextType);
+        return ExtractFromEf6OrPoco(dbContextType, explicitSourcePath, assemblyPath);
     }
 
     private Microsoft.EntityFrameworkCore.DbContext CreateEfCoreDbContext(Type dbContextType, string connectionString)
@@ -153,6 +164,8 @@ public class EfModelInspector
                 var storeType = property.GetRelationalTypeMapping().StoreType.ToLowerInvariant();
                 var isNullable = property.IsColumnNullable(storeObject);
                 var isPk = property.IsPrimaryKey();
+                var isExplicitPrecision = property.GetPrecision().HasValue || property.GetColumnType() != null;
+                var isExplicitMaxLength = property.GetMaxLength().HasValue;
 
                 table.Columns[colName] = new ColumnDefinition
                 {
@@ -161,7 +174,9 @@ public class EfModelInspector
                     ColumnName = colName,
                     StoreType = storeType,
                     IsNullable = isNullable,
-                    IsPrimaryKey = isPk
+                    IsPrimaryKey = isPk,
+                    IsExplicitPrecision = isExplicitPrecision,
+                    IsExplicitMaxLength = isExplicitMaxLength
                 };
             }
         }
@@ -169,9 +184,69 @@ public class EfModelInspector
         return result;
     }
 
-    private Dictionary<string, TableDefinition> ExtractFromEf6OrPoco(Type dbContextType)
+    private static void ApplyFluentConfigurations(
+        Dictionary<string, TableDefinition> tables, 
+        Dictionary<string, EntityFluentConfig> fluentConfigs)
+    {
+        if (fluentConfigs.Count == 0) return;
+
+        foreach (var table in tables.Values)
+        {
+            foreach (var (entityName, entityCfg) in fluentConfigs)
+            {
+                if (!string.Equals(table.Name, entityCfg.TableName ?? entityName, StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(table.Name, entityName + "s", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                foreach (var (propName, propCfg) in entityCfg.Properties)
+                {
+                    var targetColName = propCfg.ColumnName ?? propName;
+                    if (table.Columns.TryGetValue(targetColName, out var col) || table.Columns.TryGetValue(propName, out col))
+                    {
+                        if (propCfg.Precision.HasValue)
+                        {
+                            table.Columns[col.ColumnName] = col with 
+                            { 
+                                StoreType = $"decimal({propCfg.Precision.Value},{propCfg.Scale ?? 0})",
+                                IsExplicitPrecision = true 
+                            };
+                        }
+                        else if (propCfg.MaxLength.HasValue)
+                        {
+                            table.Columns[col.ColumnName] = col with 
+                            { 
+                                StoreType = $"nvarchar({propCfg.MaxLength.Value})",
+                                IsExplicitMaxLength = true 
+                            };
+                        }
+                        else if (!string.IsNullOrWhiteSpace(propCfg.ColumnType))
+                        {
+                            table.Columns[col.ColumnName] = col with
+                            {
+                                StoreType = propCfg.ColumnType.ToLowerInvariant(),
+                                IsExplicitPrecision = true
+                            };
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private Dictionary<string, TableDefinition> ExtractFromEf6OrPoco(
+        Type dbContextType, 
+        string? explicitSourcePath = null, 
+        string? assemblyPath = null)
     {
         var result = new Dictionary<string, TableDefinition>(StringComparer.OrdinalIgnoreCase);
+
+        // Extraer configuraciones Fluent API desde el archivo fuente C# o el IL de OnModelCreating
+        var fluentConfigs = _dataContextParser.ExtractConfigurations(
+            dbContextType, 
+            assemblyPath ?? dbContextType.Assembly.Location, 
+            explicitSourcePath);
 
         // Inspeccionar todas las propiedades DbSet<T> o IDbSet<T>
         var dbSetProperties = dbContextType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
@@ -187,10 +262,12 @@ public class EfModelInspector
             var entityType = dbSetProp.PropertyType.GetGenericArguments()[0];
             if (!processedEntities.Add(entityType)) continue; // misma entidad expuesta en varios DbSet
             
-            // Resolver Nombre de Tabla y Esquema (misma convención que EF6)
+            fluentConfigs.TryGetValue(entityType.Name, out var entityFluent);
+
+            // Resolver Nombre de Tabla y Esquema (Fluent API tiene precedencia)
             var tableAttr = entityType.GetCustomAttribute<TableAttribute>();
-            var tableName = tableAttr?.Name ?? pluralize(entityType.Name);
-            var schema = tableAttr?.Schema ?? "dbo";
+            var tableName = entityFluent?.TableName ?? tableAttr?.Name ?? pluralize(entityType.Name);
+            var schema = entityFluent?.Schema ?? tableAttr?.Schema ?? "dbo";
             var tableKey = $"{schema}.{tableName}";
 
             if (!result.TryGetValue(tableKey, out var table))
@@ -221,15 +298,53 @@ public class EfModelInspector
                     if (prop.GetCustomAttribute<NotMappedAttribute>() != null) continue;
                     if (!IsScalarType(prop.PropertyType)) continue;
 
+                    PropertyFluentConfig? propFluent = null;
+                    entityFluent?.Properties.TryGetValue(prop.Name, out propFluent);
+
                     var colAttr = prop.GetCustomAttribute<ColumnAttribute>();
-                    var colName = colAttr?.Name ?? prop.Name;
+                    var colName = propFluent?.ColumnName ?? colAttr?.Name ?? prop.Name;
+                    
                     // Convención de EF6: [Key], "Id" o "<Clase>Id" (sin distinguir mayúsculas)
                     var isPk = prop.GetCustomAttribute<KeyAttribute>() != null || 
                                prop.Name.Equals("Id", StringComparison.OrdinalIgnoreCase) ||
                                prop.Name.Equals($"{entityType.Name}Id", StringComparison.OrdinalIgnoreCase);
 
-                    var isNullable = !isPk && IsNullableType(prop.PropertyType) && prop.GetCustomAttribute<RequiredAttribute>() == null;
-                    var storeType = ResolveStoreTypeFromProperty(prop, colAttr?.TypeName);
+                    bool isNullable;
+                    if (propFluent?.IsRequired.HasValue == true)
+                    {
+                        isNullable = !propFluent.IsRequired.Value;
+                    }
+                    else
+                    {
+                        isNullable = !isPk && IsNullableType(prop.PropertyType) && prop.GetCustomAttribute<RequiredAttribute>() == null;
+                    }
+
+                    string storeType;
+                    bool isExplicitPrecision = false;
+                    bool isExplicitMaxLength = false;
+
+                    if (propFluent?.Precision.HasValue == true)
+                    {
+                        storeType = $"decimal({propFluent.Precision.Value},{propFluent.Scale ?? 0})";
+                        isExplicitPrecision = true;
+                    }
+                    else if (propFluent?.MaxLength.HasValue == true)
+                    {
+                        storeType = $"nvarchar({propFluent.MaxLength.Value})";
+                        isExplicitMaxLength = true;
+                    }
+                    else if (!string.IsNullOrWhiteSpace(propFluent?.ColumnType))
+                    {
+                        storeType = propFluent.ColumnType.ToLowerInvariant();
+                        isExplicitPrecision = true;
+                    }
+                    else
+                    {
+                        storeType = ResolveStoreTypeFromProperty(prop, colAttr?.TypeName);
+                        isExplicitPrecision = !string.IsNullOrWhiteSpace(colAttr?.TypeName);
+                        isExplicitMaxLength = prop.GetCustomAttribute<StringLengthAttribute>() != null ||
+                                              prop.GetCustomAttribute<MaxLengthAttribute>() != null;
+                    }
 
                     table.Columns[colName] = new ColumnDefinition
                     {
@@ -238,7 +353,9 @@ public class EfModelInspector
                         ColumnName = colName,
                         StoreType = storeType,
                         IsNullable = isNullable,
-                        IsPrimaryKey = isPk
+                        IsPrimaryKey = isPk,
+                        IsExplicitPrecision = isExplicitPrecision,
+                        IsExplicitMaxLength = isExplicitMaxLength
                     };
                 }
                 catch

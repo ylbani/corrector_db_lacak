@@ -48,7 +48,7 @@ public class SchemaDiffEngine
                     continue;
                 }
 
-                var typeChanged = !AreTypesEquivalent(dbCol.StoreType, efCol.StoreType);
+                var typeChanged = !AreTypesEquivalent(dbCol, efCol);
                 var nullChanged = dbCol.IsNullable != efCol.IsNullable;
 
                 if (typeChanged || nullChanged)
@@ -111,21 +111,24 @@ public class SchemaDiffEngine
         return null;
     }
 
-    private static bool AreTypesEquivalent(string typeA, string typeB)
+    private static bool AreTypesEquivalent(ColumnDefinition dbCol, ColumnDefinition efCol)
     {
         string Clean(string t) => t.Replace(" ", "").ToLowerInvariant();
-        var a = Clean(typeA);
-        var b = Clean(typeB);
+        var a = Clean(dbCol.StoreType);
+        var b = Clean(efCol.StoreType);
 
         if (a == b) return true;
 
-        // La precisión fluent (HasPrecision) no es legible por reflexión: EF reporta decimal(18,2)
-        // por defecto, así que se acepta cualquier decimal en BD para evitar falsos positivos.
-        if (b == "decimal(18,2)" && a.StartsWith("decimal(")) return true;
+        // La precisión fluent (HasPrecision) ahora se lee directamente desde el DataContext.
+        // Si el tipo de EF es el decimal(18,2) por defecto NO explícito, y la BD tiene decimal,
+        // se acepta para evitar falsos positivos con modelos simples.
+        // Pero si la precisión fue configurada explícitamente en el DataContext (p. ej. HasPrecision(38,38)),
+        // DEBE compararse estrictamente contra la BD.
+        if (!efCol.IsExplicitPrecision && b == "decimal(18,2)" && a.StartsWith("decimal(")) return true;
 
-        // [MaxLength]/[StringLength] y HasColumnType fluent tampoco son siempre legibles:
-        // EF reporta nvarchar(max) cuando la BD tiene nvarchar(n). No se altera (evita falsos positivos).
-        if (b == "nvarchar(max)" && a.StartsWith("nvarchar(")) return true;
+        // [MaxLength]/[StringLength] o HasMaxLength fluent:
+        // Solo se tolera nvarchar(n) en BD si en EF no se configuró una longitud explícita.
+        if (!efCol.IsExplicitMaxLength && b == "nvarchar(max)" && a.StartsWith("nvarchar(")) return true;
 
         // Nota: Si la BD tiene float o real y el modelo de EF tiene decimal, NO son equivalentes
         // y causan System.InvalidOperationException al materializar con EF. Por ello se reportan como TypeMismatch.
