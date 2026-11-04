@@ -8,247 +8,287 @@
     xmlns:model="using:DbSchemaSyncAuditor.Model"
     mc:Ignorable="d">
 
-    <Grid Padding="24" RowSpacing="16">
+    <Grid Padding="16,10" RowSpacing="10">
         <Grid.RowDefinitions>
-            <!-- Header -->
+            <!-- 0: Header -->
             <RowDefinition Height="Auto" />
-            <!-- Server Connection & DB Selector -->
+            <!-- 1: Cards Lado a Lado (SQL y EF) -->
             <RowDefinition Height="Auto" />
-            <!-- DbContext DLL Selector -->
-            <RowDefinition Height="Auto" />
-            <!-- Tabs (Diffs, SQL Script, Logs) -->
+            <!-- 2: Tabs de Resultados (Diagnóstico, Script, Logs) -->
             <RowDefinition Height="*" />
-            <!-- Status Bar / Execution Bar -->
+            <!-- 3: Footer de Estado y Botón de Aplicar -->
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- HEADER CON BOTÓN DE AUTO-ACTUALIZACIÓN -->
+        <!-- HEADER CON BOTÓN DE TEMA Y AUTO-ACTUALIZACIÓN -->
         <Grid Grid.Row="0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <StackPanel Spacing="4">
-                <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-                    <Image Source="ms-appx:///Assets/Square44x44Logo.targetsize-48_altform-lightunplated.png" 
-                           Width="38" 
-                           Height="38" 
+            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                <Image Source="ms-appx:///Assets/Square44x44Logo.targetsize-48_altform-lightunplated.png" 
+                       Width="30" 
+                       Height="30" 
+                       VerticalAlignment="Center" />
+                <TextBlock Text="DB Sync Auditor" 
+                           Style="{StaticResource SubtitleTextBlockStyle}" 
+                           FontWeight="Bold" 
                            VerticalAlignment="Center" />
-                    <TextBlock Text="DB Sync Auditor" 
-                               Style="{StaticResource TitleTextBlockStyle}" 
-                               FontWeight="Bold" 
-                               VerticalAlignment="Center" />
-                    <Border Background="{ThemeResource LayerFillColorDefaultBrush}" 
-                            CornerRadius="4" 
-                            Padding="6,2" 
-                            Margin="8,0,0,0"
-                            VerticalAlignment="Center">
-                        <TextBlock x:Name="TxtAppVersion" Text="v1.0.0" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    </Border>
-                </StackPanel>
-                <TextBlock Text="Auditor de Esquemas EF Core / EF6 vs SQL Server Físico" Style="{StaticResource BodyTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                <Border Background="{ThemeResource LayerFillColorDefaultBrush}" 
+                        CornerRadius="4" 
+                        Padding="6,2" 
+                        VerticalAlignment="Center">
+                    <TextBlock x:Name="TxtAppVersion" Text="v1.0.3" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                </Border>
+                <TextBlock Text="• Auditor de Esquemas EF Core / EF6 vs SQL Server Físico" 
+                           Style="{StaticResource CaptionTextBlockStyle}" 
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" 
+                           VerticalAlignment="Center" 
+                           Margin="4,0,0,0" />
             </StackPanel>
 
-            <!-- Acciones de Actualización -->
+            <!-- Acciones de Cabecera: Modo Oscuro y Buscar Actualización -->
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                <ProgressRing x:Name="RingUpdate" IsActive="False" Visibility="Collapsed" Width="20" Height="20" />
+                <Button x:Name="BtnThemeToggle" Click="BtnThemeToggle_Click" Height="32">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon x:Name="IconTheme" Glyph="&#xE708;" FontSize="13" />
+                        <TextBlock x:Name="TxtTheme" Text="Modo Oscuro" FontSize="12" />
+                    </StackPanel>
+                </Button>
+
+                <ProgressRing x:Name="RingUpdate" IsActive="False" Visibility="Collapsed" Width="18" Height="18" />
                 <TextBlock x:Name="TxtUpdateStatus" VerticalAlignment="Center" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Visibility="Collapsed" />
-                <Button x:Name="BtnCheckUpdate" Click="BtnCheckUpdate_Click">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <FontIcon Glyph="&#xE895;" FontSize="14" />
-                        <TextBlock Text="Buscar Actualización" />
+                
+                <Button x:Name="BtnCheckUpdate" Click="BtnCheckUpdate_Click" Height="32">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon Glyph="&#xE895;" FontSize="13" />
+                        <TextBlock Text="Buscar Actualización" FontSize="12" />
                     </StackPanel>
                 </Button>
             </StackPanel>
         </Grid>
 
-        <!-- PANEL 1: CONEXIÓN SQL SERVER Y SELECTOR DE BASE DE DATOS -->
-        <Border Grid.Row="1" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="16">
-            <Grid RowSpacing="12">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
+        <!-- PANEL SUPERIOR: 2 CARDS LADO A LADO -->
+        <Grid Grid.Row="1" ColumnSpacing="12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
 
-                <!-- Fila 1: Servidor, Autenticación, Credenciales, Botón Conectar -->
-                <Grid ColumnSpacing="12">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="220" />
-                        <ColumnDefinition Width="180" />
-                        <ColumnDefinition Width="140" />
-                        <ColumnDefinition Width="160" />
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
+            <!-- CARD IZQUIERDO: CONEXIÓN SQL SERVER Y SELECCIÓN DE BD -->
+            <Border Grid.Column="0" 
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                    BorderThickness="1" 
+                    CornerRadius="8" 
+                    Padding="14,10">
+                <Grid RowSpacing="8">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
 
-                    <TextBox x:Name="TxtServer" 
-                             Header="Servidor SQL" 
-                             PlaceholderText="localhost o .\SQLEXPRESS" 
-                             Text="localhost" />
+                    <!-- Fila 0: Título del Card -->
+                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <FontIcon Glyph="&#xE753;" FontSize="13" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                        <TextBlock Text="1. Conexión SQL Server" FontWeight="SemiBold" FontSize="13" />
+                    </StackPanel>
 
-                    <ComboBox Grid.Column="1" 
-                              x:Name="CboAuthType" 
-                              Header="Autenticación" 
-                              HorizontalAlignment="Stretch"
-                              SelectionChanged="CboAuthType_SelectionChanged">
-                        <ComboBoxItem Content="SQL Server (sa)" IsSelected="True" />
-                        <ComboBoxItem Content="Windows Authentication" />
-                    </ComboBox>
+                    <!-- Fila 1: Servidor, Autenticación, Usuario, Contraseña -->
+                    <Grid Grid.Row="1" ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="1.3*" />
+                            <ColumnDefinition Width="1.3*" />
+                            <ColumnDefinition Width="1*" />
+                            <ColumnDefinition Width="1*" />
+                        </Grid.ColumnDefinitions>
 
-                    <TextBox Grid.Column="2" 
-                             x:Name="TxtUser" 
-                             Header="Usuario" 
-                             Text="sa" />
+                        <TextBox x:Name="TxtServer" 
+                                 Header="Servidor SQL" 
+                                 PlaceholderText="localhost o .\SQLEXPRESS" 
+                                 Text="localhost" />
 
-                    <PasswordBox Grid.Column="3" 
-                                 x:Name="TxtPassword" 
-                                 Header="Contraseña" 
-                                 Password="" />
+                        <ComboBox Grid.Column="1" 
+                                  x:Name="CboAuthType" 
+                                  Header="Autenticación" 
+                                  HorizontalAlignment="Stretch"
+                                  SelectionChanged="CboAuthType_SelectionChanged">
+                            <ComboBoxItem Content="SQL Server (sa)" IsSelected="True" />
+                            <ComboBoxItem Content="Windows Auth" />
+                        </ComboBox>
 
-                    <Button Grid.Column="4" 
-                            x:Name="BtnConnectServer" 
-                            Click="BtnConnectServer_Click" 
-                            VerticalAlignment="Bottom" 
-                            Style="{StaticResource AccentButtonStyle}" 
-                            Height="34">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <FontIcon Glyph="&#xE703;" />
-                            <TextBlock Text="Conectar y Cargar BDs" />
-                        </StackPanel>
-                    </Button>
+                        <TextBox Grid.Column="2" 
+                                 x:Name="TxtUser" 
+                                 Header="Usuario" 
+                                 Text="sa" />
 
-                    <ProgressRing Grid.Column="5" x:Name="RingConnecting" IsActive="False" Visibility="Collapsed" Width="20" Height="20" VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="8,0,0,6" />
+                        <PasswordBox Grid.Column="3" 
+                                     x:Name="TxtPassword" 
+                                     Header="Contraseña" 
+                                     Password="" />
+                    </Grid>
+
+                    <!-- Fila 2: Botón Conectar, Selector de BD, Identificador de Cliente -->
+                    <Grid Grid.Row="2" ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="1.5*" />
+                            <ColumnDefinition Width="1*" />
+                        </Grid.ColumnDefinitions>
+
+                        <Button x:Name="BtnConnectServer" 
+                                Click="BtnConnectServer_Click" 
+                                VerticalAlignment="Bottom" 
+                                Style="{StaticResource AccentButtonStyle}" 
+                                Height="32">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="&#xE703;" FontSize="12" />
+                                <TextBlock Text="Conectar" />
+                                <ProgressRing x:Name="RingConnecting" IsActive="False" Visibility="Collapsed" Width="14" Height="14" Margin="4,0,0,0" />
+                            </StackPanel>
+                        </Button>
+
+                        <ComboBox Grid.Column="1" 
+                                  x:Name="CboDatabases" 
+                                  Header="Base de Datos a Auditar" 
+                                  HorizontalAlignment="Stretch" 
+                                  PlaceholderText="-- Conéctate primero --" />
+
+                        <TextBox Grid.Column="2" 
+                                 x:Name="TxtClientName" 
+                                 Header="Identificador Cliente" 
+                                 Text="ClienteProduccion" />
+                    </Grid>
                 </Grid>
+            </Border>
 
-                <!-- Fila 2: Selector de BD, Cliente, Botón Escanear -->
-                <Grid Grid.Row="1" ColumnSpacing="12">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="280" />
-                        <ColumnDefinition Width="220" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
+            <!-- CARD DERECHO: PROYECTO EF (DLL, DATACONTEXT Y ESCANEO) -->
+            <Border Grid.Column="1" 
+                    Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}" 
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                    BorderThickness="1" 
+                    CornerRadius="8" 
+                    Padding="14,10">
+                <Grid RowSpacing="8">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
 
-                    <ComboBox x:Name="CboDatabases" 
-                              Header="Base de Datos Seleccionada" 
-                              HorizontalAlignment="Stretch" 
-                              PlaceholderText="-- Conéctate para ver las BDs --" />
-
-                    <TextBox Grid.Column="1" 
-                             x:Name="TxtClientName" 
-                             Header="Identificador del Cliente" 
-                             Text="ClienteProduccion" />
-
-                    <Button Grid.Column="2" 
-                            x:Name="BtnScan" 
-                            Click="BtnScan_Click" 
-                            VerticalAlignment="Bottom" 
-                            Style="{StaticResource AccentButtonStyle}" 
-                            Height="34">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon Glyph="&#xE721;" />
-                            <TextBlock Text="Escanear y Diagnosticar" FontWeight="SemiBold" />
+                    <!-- Fila 0: Título del Card con estado de vinculación -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <FontIcon Glyph="&#xE74C;" FontSize="13" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                            <TextBlock Text="2. Modelo EF (DLL y DataContext)" FontWeight="SemiBold" FontSize="13" />
                         </StackPanel>
-                    </Button>
+
+                        <TextBlock Grid.Column="1" 
+                                   x:Name="TxtDataContextStatus" 
+                                   Text="Detectado" 
+                                   VerticalAlignment="Center" 
+                                   Foreground="{ThemeResource SystemFillColorSuccessBrush}" 
+                                   FontSize="11" 
+                                   FontWeight="SemiBold"
+                                   Visibility="Collapsed" />
+                    </Grid>
+
+                    <!-- Fila 1: Botón Buscar DLL + Ruta DLL + Selector DbContext -->
+                    <Grid Grid.Row="1" ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="1.7*" />
+                            <ColumnDefinition Width="1.3*" />
+                        </Grid.ColumnDefinitions>
+
+                        <Button x:Name="BtnBrowseDll" 
+                                Click="BtnBrowseDll_Click" 
+                                VerticalAlignment="Bottom" 
+                                Height="32">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="&#xE8B7;" FontSize="12" />
+                                <TextBlock Text="DLL..." />
+                            </StackPanel>
+                        </Button>
+
+                        <TextBox Grid.Column="1" 
+                                 x:Name="TxtDllPathInput" 
+                                 Header="Ruta del archivo DLL compilado" 
+                                 PlaceholderText="Ej. ...\bin\LacakWEB.dll" 
+                                 Text="D:\Dev\PROYECTO LACAK WEB\DashboardWEB\dashboardWEB\bin\LacakWEB.dll" 
+                                 TextChanged="TxtDllPathInput_TextChanged" />
+
+                        <ComboBox Grid.Column="2" 
+                                  x:Name="CboDbContextTypes" 
+                                  Header="DbContext" 
+                                  HorizontalAlignment="Stretch" 
+                                  IsEnabled="False" 
+                                  SelectionChanged="CboDbContextTypes_SelectionChanged" 
+                                  PlaceholderText="-- Carga DLL --" />
+                    </Grid>
+
+                    <!-- Fila 2: Botón Buscar .cs + Ruta .cs + Botón Escanear y Diagnosticar -->
+                    <Grid Grid.Row="2" ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <Button x:Name="BtnBrowseDataContext" 
+                                Click="BtnBrowseDataContext_Click" 
+                                VerticalAlignment="Bottom" 
+                                Height="32">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="&#xE8A5;" FontSize="12" />
+                                <TextBlock Text=".cs..." />
+                            </StackPanel>
+                        </Button>
+
+                        <TextBox Grid.Column="1" 
+                                 x:Name="TxtDataContextPath" 
+                                 Header="Código Fuente DataContext (.cs)" 
+                                 PlaceholderText="Autodetectado o manual (ej. DashboardContext.cs)" />
+
+                        <Button Grid.Column="2" 
+                                x:Name="BtnScan" 
+                                Click="BtnScan_Click" 
+                                VerticalAlignment="Bottom" 
+                                Style="{StaticResource AccentButtonStyle}" 
+                                Height="32">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="&#xE721;" FontSize="12" />
+                                <TextBlock Text="Escanear y Diagnosticar" FontWeight="SemiBold" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
                 </Grid>
-            </Grid>
-        </Border>
+            </Border>
+        </Grid>
 
-        <!-- PANEL 2: SELECTOR DE DLL Y ARCHIVO DE CÓDIGO DATACONTEXT (.cs) -->
-        <Border Grid.Row="2" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="16,12">
-            <Grid RowSpacing="10">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
-
-                <!-- Fila 1: DLL compilada y DbContext selector -->
-                <Grid ColumnSpacing="14">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="340" />
-                    </Grid.ColumnDefinitions>
-
-                    <Button x:Name="BtnBrowseDll" 
-                            Click="BtnBrowseDll_Click" 
-                            Style="{StaticResource DefaultButtonStyle}"
-                            VerticalAlignment="Bottom"
-                            Height="34">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon Glyph="&#xE8B7;" />
-                            <TextBlock Text="Buscar DLL..." FontWeight="SemiBold" />
-                        </StackPanel>
-                    </Button>
-
-                    <TextBox Grid.Column="1" 
-                             x:Name="TxtDllPathInput" 
-                             Header="Ruta del archivo DLL compilado" 
-                             PlaceholderText="Ej. D:\Dev\PROYECTO LACAK WEB\DashboardWEB\dashboardWEB\bin\LacakWEB.dll" 
-                             Text="D:\Dev\PROYECTO LACAK WEB\DashboardWEB\dashboardWEB\bin\LacakWEB.dll" 
-                             TextChanged="TxtDllPathInput_TextChanged" />
-
-                    <ComboBox Grid.Column="2" 
-                              x:Name="CboDbContextTypes" 
-                              Header="DbContext a Auditar" 
-                              HorizontalAlignment="Stretch" 
-                              IsEnabled="False" 
-                              SelectionChanged="CboDbContextTypes_SelectionChanged"
-                              PlaceholderText="-- Selecciona primero la DLL --" />
-                </Grid>
-
-                <!-- Fila 2: Archivo fuente del DataContext (.cs) para leer OnModelCreating directamente -->
-                <Grid Grid.Row="1" ColumnSpacing="14">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-
-                    <Button x:Name="BtnBrowseDataContext" 
-                            Click="BtnBrowseDataContext_Click" 
-                            Style="{StaticResource DefaultButtonStyle}"
-                            VerticalAlignment="Bottom"
-                            Height="34">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon Glyph="&#xE8A5;" />
-                            <TextBlock Text="Buscar .cs..." FontWeight="SemiBold" />
-                        </StackPanel>
-                    </Button>
-
-                    <TextBox Grid.Column="1" 
-                             x:Name="TxtDataContextPath" 
-                             Header="Archivo fuente del DataContext (.cs) — Detecta cambios en OnModelCreating (HasPrecision, etc.)" 
-                             PlaceholderText="Autodetectado o selecciona el archivo .cs (ej. DashboardContext.cs)" />
-
-                    <TextBlock Grid.Column="2" 
-                               x:Name="TxtDataContextStatus" 
-                               Text="Detectado" 
-                               VerticalAlignment="Bottom" 
-                               Foreground="{ThemeResource SystemFillColorSuccessBrush}" 
-                               FontSize="12" 
-                               Margin="0,0,0,8" 
-                               Visibility="Collapsed" />
-                </Grid>
-            </Grid>
-        </Border>
-
-        <!-- PANEL 3: TABS DE RESULTADOS -->
-        <TabView Grid.Row="3" x:Name="ResultsTabView" VerticalAlignment="Stretch">
+        <!-- PANEL 2: TABS DE RESULTADOS (MAXIMIZADO EN ALTURA) -->
+        <TabView Grid.Row="2" x:Name="ResultsTabView" VerticalAlignment="Stretch">
             <!-- TAB 1: Hallazgos y Discrepancias -->
             <TabViewItem Header="1. Diagnóstico y Discrepancias" IsClosable="False">
                 <TabViewItem.IconSource>
                     <FontIconSource Glyph="&#xE9D9;" />
                 </TabViewItem.IconSource>
-                <Grid Padding="8" RowSpacing="10">
+                <Grid Padding="8" RowSpacing="8">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
                     <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
-                        <TextBlock x:Name="TxtSummary" Text="Selecciona la DLL de tu proyecto y la base de datos a auditar." Style="{StaticResource SubtitleTextBlockStyle}" />
-                        <ProgressRing x:Name="RingLoading" IsActive="False" Visibility="Collapsed" Width="20" Height="20" />
+                        <TextBlock x:Name="TxtSummary" Text="Selecciona la DLL de tu proyecto y la base de datos a auditar." Style="{StaticResource SubtitleTextBlockStyle}" FontSize="14" />
+                        <ProgressRing x:Name="RingLoading" IsActive="False" Visibility="Collapsed" Width="18" Height="18" />
                     </StackPanel>
 
                     <ListView Grid.Row="1" x:Name="ListDiffs" SelectionMode="None">
@@ -262,17 +302,17 @@
                                         <ColumnDefinition Width="200" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Severidad" FontWeight="SemiBold" />
-                                    <TextBlock Grid.Column="1" Text="Objeto" FontWeight="SemiBold" />
-                                    <TextBlock Grid.Column="2" Text="Estado en BD" FontWeight="SemiBold" />
-                                    <TextBlock Grid.Column="3" Text="Esperado en DbContext" FontWeight="SemiBold" />
-                                    <TextBlock Grid.Column="4" Text="Acción Recomendada" FontWeight="SemiBold" />
+                                    <TextBlock Text="Severidad" FontWeight="Bold" />
+                                    <TextBlock Grid.Column="1" Text="Objeto" FontWeight="Bold" />
+                                    <TextBlock Grid.Column="2" Text="Esquema BD Actual" FontWeight="Bold" />
+                                    <TextBlock Grid.Column="3" Text="Modelo EF Esperado" FontWeight="Bold" />
+                                    <TextBlock Grid.Column="4" Text="Acción Correctiva Sugerida" FontWeight="Bold" />
                                 </Grid>
                             </DataTemplate>
                         </ListView.HeaderTemplate>
                         <ListView.ItemTemplate>
                             <DataTemplate x:DataType="model:SchemaDiffItem">
-                                <Grid Padding="12,10" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
+                                <Grid Padding="12,8" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="110" />
                                         <ColumnDefinition Width="220" />
@@ -316,20 +356,20 @@
                 <TabViewItem.IconSource>
                     <FontIconSource Glyph="&#xE943;" />
                 </TabViewItem.IconSource>
-                <Grid Padding="8" RowSpacing="10">
+                <Grid Padding="8" RowSpacing="8">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
                     
                     <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="10">
-                        <Button x:Name="BtnSaveScript" Click="BtnSaveScript_Click" Style="{StaticResource DefaultButtonStyle}">
+                        <Button x:Name="BtnSaveScript" Click="BtnSaveScript_Click" Style="{StaticResource DefaultButtonStyle}" Height="32">
                             <StackPanel Orientation="Horizontal" Spacing="6">
-                                <FontIcon Glyph="&#xE74E;" />
+                                <FontIcon Glyph="&#xE74E;" FontSize="12" />
                                 <TextBlock Text="Guardar Script en Disco (.sql)" />
                             </StackPanel>
                         </Button>
-                        <TextBlock x:Name="TxtScriptPath" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <TextBlock x:Name="TxtScriptPath" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="12" />
                     </StackPanel>
 
                     <TextBox Grid.Row="1" 
@@ -338,7 +378,9 @@
                              AcceptsReturn="True" 
                              TextWrapping="NoWrap" 
                              FontFamily="Consolas" 
-                             FontSize="13" 
+                             FontSize="12" 
+                             VerticalAlignment="Stretch"
+                             HorizontalAlignment="Stretch"
                              PlaceholderText="El script SQL transaccional generado aparecerá aquí tras escanear..." />
                 </Grid>
             </TabViewItem>
@@ -348,17 +390,21 @@
                 <TabViewItem.IconSource>
                     <FontIconSource Glyph="&#xE756;" />
                 </TabViewItem.IconSource>
-                <TextBox x:Name="TxtExecutionLogs" 
-                         IsReadOnly="True" 
-                         AcceptsReturn="True" 
-                         FontFamily="Consolas" 
-                         FontSize="12" 
-                         PlaceholderText="Los mensajes de ejecución del servidor SQL se mostrarán aquí..." />
+                <Grid Padding="8">
+                    <TextBox x:Name="TxtExecutionLogs" 
+                             IsReadOnly="True" 
+                             AcceptsReturn="True" 
+                             FontFamily="Consolas" 
+                             FontSize="12" 
+                             VerticalAlignment="Stretch"
+                             HorizontalAlignment="Stretch"
+                             PlaceholderText="Los mensajes de ejecución del servidor SQL se mostrarán aquí..." />
+                </Grid>
             </TabViewItem>
         </TabView>
 
-        <!-- PANEL 4: BARRA DE ACCIÓN INFERIOR -->
-        <Border Grid.Row="4" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="14,10">
+        <!-- PANEL 3: BARRA DE ACCIÓN INFERIOR -->
+        <Border Grid.Row="3" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="14,8">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
@@ -372,7 +418,7 @@
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
                     <TextBlock x:Name="TxtFooterVersion" 
-                               Text="v1.0.1" 
+                               Text="v1.0.3" 
                                FontSize="12" 
                                VerticalAlignment="Center" 
                                Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
@@ -381,9 +427,9 @@
                             IsEnabled="False" 
                             Style="{StaticResource AccentButtonStyle}" 
                             Background="#10B981" 
-                            Height="36">
+                            Height="34">
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon Glyph="&#xE768;" />
+                            <FontIcon Glyph="&#xE768;" FontSize="13" />
                             <TextBlock Text="Aplicar Cambios en Base de Datos Ahora" FontWeight="SemiBold" />
                         </StackPanel>
                     </Button>
@@ -392,3 +438,4 @@
         </Border>
     </Grid>
 </Page>
+

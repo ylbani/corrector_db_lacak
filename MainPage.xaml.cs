@@ -22,6 +22,7 @@ public sealed partial class MainPage : Page
     private string _generatedSql = string.Empty;
     private List<Type> _discoveredDbContextTypes = [];
     private string? _selectedDllPath;
+    private const string ThemeConfigFileName = "theme_preference.txt";
 
     public MainPage()
     {
@@ -30,10 +31,74 @@ public sealed partial class MainPage : Page
         TxtAppVersion.Text = verStr;
         TxtFooterVersion.Text = verStr;
 
+        ApplySavedTheme();
+
         var defaultDll = TxtDllPathInput.Text.Trim();
         if (System.IO.File.Exists(defaultDll))
         {
             LoadAssemblyFromPath(defaultDll, silent: true);
+        }
+    }
+
+    private void ApplySavedTheme()
+    {
+        try
+        {
+            var configPath = System.IO.Path.Combine(AppContext.BaseDirectory, ThemeConfigFileName);
+            if (System.IO.File.Exists(configPath))
+            {
+                var text = System.IO.File.ReadAllText(configPath).Trim();
+                if (Enum.TryParse<ElementTheme>(text, out var theme))
+                {
+                    SetTheme(theme, save: false);
+                    return;
+                }
+            }
+        }
+        catch { }
+
+        UpdateThemeButtonUI(this.ActualTheme == ElementTheme.Dark ? ElementTheme.Dark : ElementTheme.Light);
+    }
+
+    private void BtnThemeToggle_Click(object sender, RoutedEventArgs e)
+    {
+        var targetTheme = this.ActualTheme == ElementTheme.Dark ? ElementTheme.Light : ElementTheme.Dark;
+        SetTheme(targetTheme, save: true);
+    }
+
+    private void SetTheme(ElementTheme theme, bool save)
+    {
+        this.RequestedTheme = theme;
+        if (App.MainWindow?.Content is FrameworkElement root)
+        {
+            root.RequestedTheme = theme;
+        }
+
+        UpdateThemeButtonUI(theme);
+
+        if (save)
+        {
+            try
+            {
+                var configPath = System.IO.Path.Combine(AppContext.BaseDirectory, ThemeConfigFileName);
+                System.IO.File.WriteAllText(configPath, theme.ToString());
+            }
+            catch { }
+        }
+    }
+
+    private void UpdateThemeButtonUI(ElementTheme theme)
+    {
+        if (IconTheme == null || TxtTheme == null) return;
+        if (theme == ElementTheme.Dark)
+        {
+            IconTheme.Glyph = "\uE706"; // Sol
+            TxtTheme.Text = "Modo Claro";
+        }
+        else
+        {
+            IconTheme.Glyph = "\uE708"; // Luna
+            TxtTheme.Text = "Modo Oscuro";
         }
     }
 

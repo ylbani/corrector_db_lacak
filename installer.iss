@@ -1,6 +1,6 @@
 ; Inno Setup Script para DbSchemaSyncAuditor
 #define MyAppName "DbSchemaSyncAuditor"
-#define MyAppVersion "1.0.2"
+#define MyAppVersion "1.0.3"
 #define MyAppPublisher "LacakSoft"
 #define MyAppExeName "DbSchemaSyncAuditor.exe"
 
@@ -46,4 +46,5 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; WorkingDi
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; WorkingDir: "{app}"; Flags: nowait postinstall skipifsilent
+
 
