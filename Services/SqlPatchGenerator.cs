@@ -16,6 +16,7 @@ public class SqlPatchGenerator
         sb.AppendLine("BEGIN TRANSACTION;");
         sb.AppendLine("BEGIN TRY");
         sb.AppendLine("    DECLARE @sql NVARCHAR(MAX);");
+        sb.AppendLine("    DECLARE @CurrentStep NVARCHAR(500) = N'Inicio';");
         sb.AppendLine();
 
         foreach (var diff in diffs.Where(d => d.Type != DiffType.ExtraInDb))
@@ -43,7 +44,7 @@ public class SqlPatchGenerator
         sb.AppendLine("END TRY");
         sb.AppendLine("BEGIN CATCH");
         sb.AppendLine("    IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;");
-        sb.AppendLine("    DECLARE @ErrMsg NVARCHAR(4000) = ERROR_MESSAGE();");
+        sb.AppendLine("    DECLARE @ErrMsg NVARCHAR(4000) = N'[' + ISNULL(@CurrentStep, N'Desconocido') + N'] ' + ERROR_MESSAGE();");
         sb.AppendLine("    DECLARE @ErrSev INT = ERROR_SEVERITY();");
         sb.AppendLine("    DECLARE @ErrState INT = ERROR_STATE();");
         sb.AppendLine("    RAISERROR(@ErrMsg, @ErrSev, @ErrState);");
@@ -55,6 +56,7 @@ public class SqlPatchGenerator
     private static void AppendCreateTable(StringBuilder sb, TableDefinition table)
     {
         sb.AppendLine($"    -- [MISSING TABLE] [{table.Schema}].[{table.Name}]");
+        sb.AppendLine($"    SET @CurrentStep = N'CREATE TABLE [{table.Schema}].[{table.Name}]';");
         sb.AppendLine($"    IF NOT EXISTS (SELECT 1 FROM sys.tables t JOIN sys.schemas s ON t.schema_id = s.schema_id WHERE s.name = '{table.Schema}' AND t.name = '{table.Name}')");
         sb.AppendLine("    BEGIN");
         sb.AppendLine($"        CREATE TABLE [{table.Schema}].[{table.Name}] (");
@@ -82,6 +84,7 @@ public class SqlPatchGenerator
     private static void AppendAddColumn(StringBuilder sb, ColumnDefinition col)
     {
         sb.AppendLine($"    -- [MISSING COLUMN] [{col.TableSchema}].[{col.TableName}].[{col.ColumnName}]");
+        sb.AppendLine($"    SET @CurrentStep = N'ADD COLUMN [{col.TableSchema}].[{col.TableName}].[{col.ColumnName}] ({col.StoreType})';");
         sb.AppendLine($"    IF NOT EXISTS (SELECT 1 FROM sys.columns c JOIN sys.tables t ON c.object_id = t.object_id JOIN sys.schemas s ON t.schema_id = s.schema_id WHERE s.name = '{col.TableSchema}' AND t.name = '{col.TableName}' AND c.name = '{col.ColumnName}')");
         sb.AppendLine("    BEGIN");
 
@@ -105,6 +108,7 @@ public class SqlPatchGenerator
     private static void AppendAlterColumnDefensive(StringBuilder sb, ColumnDefinition src, ColumnDefinition tgt)
     {
         sb.AppendLine($"    -- [ALTER COLUMN] [{src.TableSchema}].[{src.TableName}].[{src.ColumnName}] ({src.StoreType} -> {tgt.StoreType})");
+        sb.AppendLine($"    SET @CurrentStep = N'ALTER COLUMN [{src.TableSchema}].[{src.TableName}].[{src.ColumnName}] ({src.StoreType} -> {tgt.StoreType})';");
         sb.AppendLine("    BEGIN");
         
         // 1. Dropear Default Constraints dependientes

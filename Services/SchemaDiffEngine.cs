@@ -113,7 +113,7 @@ public class SchemaDiffEngine
 
     private static bool AreTypesEquivalent(ColumnDefinition dbCol, ColumnDefinition efCol)
     {
-        string Clean(string t) => t.Replace(" ", "").ToLowerInvariant();
+        string Clean(string t) => t.Replace(" ", "").ToLowerInvariant().Replace("numeric(", "decimal(");
         var a = Clean(dbCol.StoreType);
         var b = Clean(efCol.StoreType);
 

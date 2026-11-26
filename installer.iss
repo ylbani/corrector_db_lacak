@@ -1,6 +1,6 @@
 ; Inno Setup Script para DbSchemaSyncAuditor
 #define MyAppName "DbSchemaSyncAuditor"
-#define MyAppVersion "1.0.3"
+#define MyAppVersion "1.0.4"
 #define MyAppPublisher "LacakSoft"
 #define MyAppExeName "DbSchemaSyncAuditor.exe"
 
